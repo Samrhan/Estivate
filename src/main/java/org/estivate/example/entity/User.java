@@ -1,4 +1,4 @@
-package entity;
+package org.estivate.example.entity;
 
 import org.estivate.annotations.Column;
 import org.estivate.annotations.Id;
