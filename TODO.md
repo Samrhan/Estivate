@@ -1,9 +1,9 @@
 # Project TODO List
 
 ## 1. Refactor Database Connection
-- [ ] Remove the duplicate and unused `DatabaseConnector` interface.
-- [ ] Move the `DatabaseConnector` class to a more appropriate package (e.g., `org.estivate.db`).
-- [ ] Externalize database connection details (e.g., to a `.properties` file) instead of hardcoding them.
+- [x] Remove the duplicate and unused `DatabaseConnector` interface.
+- [x] Move the `DatabaseConnector` class to a more appropriate package (e.g., `org.estivate.db`).
+- [x] Externalize database connection details (e.g., to a `.properties` file) instead of hardcoding them.
 
 ## 2. Enhance ORM Core Features
 - [ ] Implement `update` operation in `DatabaseOperations` and `SimpleORM`.
