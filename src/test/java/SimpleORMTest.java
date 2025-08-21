@@ -1,6 +1,6 @@
 package org.estivate;
 
-import entity.User;
+import org.estivate.example.entity.User;
 import org.estivate.db.DatabaseConnector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
