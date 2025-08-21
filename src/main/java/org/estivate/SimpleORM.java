@@ -1,5 +1,6 @@
 package org.estivate;
 
+import org.estivate.db.DatabaseConnector;
 import org.estivate.annotations.Column;
 import org.estivate.annotations.Table;
 
