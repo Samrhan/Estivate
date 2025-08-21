@@ -48,4 +48,28 @@ public class SimpleORMTest {
         assertEquals(1, user.getId());
         assertEquals("Test User", user.getName());
     }
+
+    @Test
+    void update_shouldUpdateUser_whenUserExists() throws Exception {
+        User user = orm.findById(User.class, 1);
+        assertNotNull(user);
+
+        user.setName("Updated User");
+        orm.update(user);
+
+        User updatedUser = orm.findById(User.class, 1);
+        assertNotNull(updatedUser);
+        assertEquals("Updated User", updatedUser.getName());
+    }
+
+    @Test
+    void delete_shouldDeleteUser_whenUserExists() throws Exception {
+        User user = orm.findById(User.class, 1);
+        assertNotNull(user);
+
+        orm.delete(user);
+
+        User deletedUser = orm.findById(User.class, 1);
+        assertNull(deletedUser);
+    }
 }
