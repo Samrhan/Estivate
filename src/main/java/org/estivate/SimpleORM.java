@@ -2,10 +2,13 @@ package org.estivate;
 
 import org.estivate.db.DatabaseConnector;
 import org.estivate.annotations.Column;
+import org.estivate.annotations.Id;
 import org.estivate.annotations.Table;
 
 import java.lang.reflect.Field;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SimpleORM implements DatabaseOperations {
 
@@ -16,25 +19,31 @@ public class SimpleORM implements DatabaseOperations {
         String tableName = tableAnnotation.name();
 
         StringBuilder columns = new StringBuilder();
-        StringBuilder values = new StringBuilder();
+        StringBuilder placeholders = new StringBuilder();
+        List<Object> values = new ArrayList<>();
+
         for (Field field : clazz.getDeclaredFields()) {
-            field.setAccessible(true); // to access private fields
-            Column columnAnnotation = field.getAnnotation(Column.class);
-            if (columnAnnotation != null) {
+            field.setAccessible(true);
+            if (field.isAnnotationPresent(Column.class)) {
+                Column columnAnnotation = field.getAnnotation(Column.class);
                 columns.append(columnAnnotation.name()).append(",");
-                values.append("'").append(field.get(entity)).append("'").append(",");
+                placeholders.append("?,");
+                values.add(field.get(entity));
             }
         }
 
-        columns.deleteCharAt(columns.length() - 1); // Remove the last comma
-        values.deleteCharAt(values.length() - 1); // Remove the last comma
+        columns.deleteCharAt(columns.length() - 1);
+        placeholders.deleteCharAt(placeholders.length() - 1);
 
         String sql = String.format("INSERT INTO %s (%s) VALUES (%s)",
-                tableName, columns, values);
-        System.out.println(sql);
+                tableName, columns, placeholders);
+
         try (Connection conn = DatabaseConnector.getConnection();
-             Statement stmt = conn.createStatement()) {
-             stmt.executeUpdate(sql);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            for (int i = 0; i < values.size(); i++) {
+                stmt.setObject(i + 1, values.get(i));
+            }
+            stmt.executeUpdate();
         }
     }
 
@@ -48,9 +57,19 @@ public class SimpleORM implements DatabaseOperations {
             conn = DatabaseConnector.getConnection();
             Table tableAnnotation = clazz.getAnnotation(Table.class);
 
-            // Assuming the first field is always the ID. Better approach would be marking the ID field explicitly.
-            Field idField = clazz.getDeclaredFields()[0];
-            idField.setAccessible(true);
+            Field idField = null;
+            for (Field field : clazz.getDeclaredFields()) {
+                field.setAccessible(true);
+                if (field.isAnnotationPresent(Id.class)) {
+                    idField = field;
+                    break;
+                }
+            }
+
+            if (idField == null) {
+                throw new Exception("No @Id annotation found in " + clazz.getName());
+            }
+
             String idColumn = idField.getAnnotation(Column.class).name();
 
             String sql = String.format("SELECT * FROM %s WHERE %s = ?", tableAnnotation.name(), idColumn);
@@ -74,5 +93,82 @@ public class SimpleORM implements DatabaseOperations {
             if (conn != null) conn.close();
         }
         return null;
+    }
+
+    @Override
+    public <T> void update(T entity) throws Exception {
+        Class<?> clazz = entity.getClass();
+        Table tableAnnotation = clazz.getAnnotation(Table.class);
+        String tableName = tableAnnotation.name();
+
+        Field idField = null;
+        Object idValue = null;
+        StringBuilder setClause = new StringBuilder();
+        List<Object> values = new ArrayList<>();
+
+        for (Field field : clazz.getDeclaredFields()) {
+            field.setAccessible(true);
+            if (field.isAnnotationPresent(Id.class)) {
+                idField = field;
+                idValue = field.get(entity);
+            } else if (field.isAnnotationPresent(Column.class)) {
+                Column columnAnnotation = field.getAnnotation(Column.class);
+                setClause.append(columnAnnotation.name()).append(" = ?,");
+                values.add(field.get(entity));
+            }
+        }
+
+        if (idField == null) {
+            throw new Exception("No @Id annotation found in " + clazz.getName());
+        }
+
+        setClause.deleteCharAt(setClause.length() - 1); // Remove the last comma
+
+        String idColumnName = idField.getAnnotation(Column.class).name();
+        String sql = String.format("UPDATE %s SET %s WHERE %s = ?",
+                tableName, setClause, idColumnName);
+
+        try (Connection conn = DatabaseConnector.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int i = 0;
+            for (; i < values.size(); i++) {
+                stmt.setObject(i + 1, values.get(i));
+            }
+            stmt.setObject(i + 1, idValue);
+            stmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public <T> void delete(T entity) throws Exception {
+        Class<?> clazz = entity.getClass();
+        Table tableAnnotation = clazz.getAnnotation(Table.class);
+        String tableName = tableAnnotation.name();
+
+        Field idField = null;
+        Object idValue = null;
+
+        for (Field field : clazz.getDeclaredFields()) {
+            field.setAccessible(true);
+            if (field.isAnnotationPresent(Id.class)) {
+                idField = field;
+                idValue = field.get(entity);
+                break;
+            }
+        }
+
+        if (idField == null) {
+            throw new Exception("No @Id annotation found in " + clazz.getName());
+        }
+
+        String idColumnName = idField.getAnnotation(Column.class).name();
+        String sql = String.format("DELETE FROM %s WHERE %s = ?",
+                tableName, idColumnName);
+
+        try (Connection conn = DatabaseConnector.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, idValue);
+            stmt.executeUpdate();
+        }
     }
 }

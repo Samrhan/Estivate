@@ -1,11 +1,13 @@
 package entity;
 
 import org.estivate.annotations.Column;
+import org.estivate.annotations.Id;
 import org.estivate.annotations.Table;
 
 @Table(name = "users")
 public class User {
 
+    @Id
     @Column(name = "id")
     private int id;
 
